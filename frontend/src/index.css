@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
+
+/* Krishi-Mate Design System - Warm, Earthy, Nature-Inspired */
+
+@layer base {
+  :root {
+    /* Warm cream background */
+    --background: 45 30% 97%;
+    --foreground: 25 40% 15%;
+
+    /* Glassmorphic cards */
+    --card: 45 40% 99%;
+    --card-foreground: 25 40% 15%;
+
+    --popover: 45 40% 99%;
+    --popover-foreground: 25 40% 15%;
+
+    /* Fresh crop green */
+    --primary: 142 55% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Warm soil brown */
+    --secondary: 30 45% 35%;
+    --secondary-foreground: 45 30% 97%;
+
+    /* Soft muted tones */
+    --muted: 45 20% 92%;
+    --muted-foreground: 25 20% 45%;
+
+    /* Sky blue accent */
+    --accent: 200 75% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Alert colors */
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 45 25% 88%;
+    --input: 45 25% 88%;
+    --ring: 142 55% 45%;
+
+    --radius: 1rem;
+
+    /* Custom Krishi-Mate tokens */
+    --crop-green: 142 70% 45%;
+    --soil-brown: 30 45% 30%;
+    --sky-blue: 200 80% 60%;
+    --sun-yellow: 45 95% 55%;
+    --wheat-gold: 40 85% 55%;
+    --leaf-light: 142 45% 75%;
+    --earth-dark: 25 35% 20%;
+
+    --sidebar-background: 45 30% 97%;
+    --sidebar-foreground: 25 40% 15%;
+    --sidebar-primary: 142 55% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 45 20% 92%;
+    --sidebar-accent-foreground: 25 40% 15%;
+    --sidebar-border: 45 25% 88%;
+    --sidebar-ring: 142 55% 45%;
+  }
+
+  .dark {
+    --background: 25 25% 8%;
+    --foreground: 45 30% 95%;
+
+    --card: 25 20% 12%;
+    --card-foreground: 45 30% 95%;
+
+    --popover: 25 20% 12%;
+    --popover-foreground: 45 30% 95%;
+
+    --primary: 142 60% 50%;
+    --primary-foreground: 25 25% 8%;
+
+    --secondary: 30 35% 25%;
+    --secondary-foreground: 45 30% 95%;
+
+    --muted: 25 15% 18%;
+    --muted-foreground: 45 15% 65%;
+
+    --accent: 200 70% 50%;
+    --accent-foreground: 25 25% 8%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 45 30% 95%;
+
+    --border: 25 15% 20%;
+    --input: 25 15% 20%;
+    --ring: 142 60% 50%;
+
+    --crop-green: 142 70% 50%;
+    --soil-brown: 30 45% 35%;
+    --sky-blue: 200 80% 55%;
+    --sun-yellow: 45 95% 60%;
+    --wheat-gold: 40 85% 60%;
+    --leaf-light: 142 45% 40%;
+    --earth-dark: 25 35% 15%;
+
+    --sidebar-background: 25 25% 10%;
+    --sidebar-foreground: 45 30% 95%;
+    --sidebar-primary: 142 60% 50%;
+    --sidebar-primary-foreground: 25 25% 8%;
+    --sidebar-accent: 25 15% 18%;
+    --sidebar-accent-foreground: 45 30% 95%;
+    --sidebar-border: 25 15% 20%;
+    --sidebar-ring: 142 60% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    @apply font-semibold;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl;
+    box-shadow: 0 8px 32px -8px hsl(25 35% 20% / 0.15);
+  }
+
+  .glass-card-strong {
+    @apply bg-card/95 backdrop-blur-2xl border border-border/30 rounded-2xl;
+    box-shadow: 0 8px 32px -8px hsl(25 35% 20% / 0.15);
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px -8px hsl(25 35% 20% / 0.2);
+  }
+
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  }
+}
