@@ -1,0 +1,78 @@
+# Enhanced Agricultural Knowledge Base - Krishi-Mate AI
+
+## 1. Crop Diseases: Identification and Control
+
+### Leaf Spot Diseases
+- **Symptoms**: Yellow haloed round or irregular spots on leaves, spindled-shaped on rice. defoliation.
+- **Organic Control**: Crop rotation, proper spacing, removal of infected plant debris.
+- **Chemical Control**: Copper-based fungicides, Carbendazim sprays.
+
+### Powdery Mildew
+- **Symptoms**: White, powdery patches on leaves and stems. Leaves may dry and curl. Common in warm, humid weather.
+- **Control**: Resistant varieties, sulfur-based fungicides, ensuring good aeration.
+
+### Rust Diseases (Yellow, Stem, Brown)
+- **Symptoms**: Reddish-brown, orange, or black pustules on stems and leaves. Leads to lodging and drying.
+- **Control**: Crop rotation, removal of volunteer plants, application of Propiconazole or Tebuconazole.
+
+### Bacterial Blights & Wilts
+- **Symptoms**: Water-soaked lesions, sudden wilting, necrotic ulcers (Fire blight), or yellowing.
+- **Control**: Streptomycin sulfate sprays, copper bactericides, use of disease-free seeds, hot water seed treatment (50°C for 20 mins).
+
+### Mosaic Viruses
+- **Symptoms**: Mottling, distortion, curling of leaves, stunted growth. Transmitted by vectors like whiteflies and aphids.
+- **Control**: Controlling insect vectors (using Neem oil or Dimethoate), using resistant varieties, destroying infected plants.
+
+### Rice Blast (Magnaporthe grisea)
+- **Symptoms**: Spindle-shaped spots with grey centers. Neck rot causes panicles to break.
+- **Control**: Integrated management, avoiding excess nitrogen, seed treatment with Thiram.
+
+### Sugarcane Red Rot
+- **Symptoms**: Withering of canes, purple/red pith with white mycelium, disagreeable odor.
+- **Control**: Healthy sett selection, pre-treatment with hot water, avoid alkaline soils.
+
+## 2. Irrigation Methods and Efficiency
+
+### Drip Irrigation (Efficiency: 80-95%)
+- **Mechanism**: Water applied slowly directly to root zone via emitters.
+- **Benefits**: Saves 35-50% water vs flood irrigation. Reduces weeds, labor, and enables fertigation. Best for high-value crops like grapes, pomegranate, and bananas.
+
+### Sprinkler Irrigation (Efficiency: 60-80%)
+- **Mechanism**: Sprays water into the air to simulate rain.
+- **Benefits**: Good for sandy soils and uneven terrain. Best for wheat, maize, and groundnut. Not recommended for tall crops or hot windy areas due to evaporation.
+
+### Traditional Surface Irrigation (Efficiency: 30-50%)
+- **Types**: Basin, furrow, and flood irrigation.
+- **Problems**: High water wastage, waterlogging, soil salinization risk.
+
+## 3. Crop Recommendations & Nutrient Management
+
+### Soil pH and Nutrient Availability
+- **Acidic Soil (< 6.5)**: Low availability of P, K, Ca, Mg. May need liming.
+- **Neutral Soil (6.5-7.5)**: Ideal for most crops. High nutrient efficiency.
+- **Alkaline Soil (> 7.5)**: Low availability of Fe, Mn, Zn, B. May need gypsum or sulfur application.
+
+### Major Nutrients (NPK)
+- **Nitrogen (N)**: Crucial for leafy growth. Deficiency causes overall yellowing.
+- **Phosphorus (P)**: Essential for root development and flowering. Deficiency causes purplish leaves.
+- **Potassium (K)**: Vital for disease resistance and fruit quality. Deficiency causes scorched leaf edges.
+
+### Recommendation Logic
+- **High Rainfall (> 1100mm)**: Rice, Jute, Coconut.
+- **Moderate Rainfall (600-1100mm)**: Maize, Cotton, Sugarcane, Pulses.
+- **Low Rainfall (< 600mm)**: Pearl Millet (Bajra), Sorghum (Jowar), Chickpea.
+
+## 4. Fertilizer Recommendations for Major Indian Crops
+
+### General NPK Guidelines (kg/acre)
+- **Rice**: 40-60 N, 15-20 P, 15-20 K. Split Nitrogen: 50% at transplanting, 25% at tillering, 25% at panicle initiation.
+- **Wheat**: 50 N, 25 P, 15 K. Apply Phosphorus and Potassium at sowing. Nitrogen in 2-3 splits during irrigation.
+- **Maize**: 60 N, 30 P, 20 K. Requires Zinc (ZnSO4 - 10kg/acre) for high yield.
+- **Cotton**: 40-50 N, 20-25 P, 15-20 K. 
+- **Sugarcane**: 100-120 N, 30-40 P, 30-40 K. High requirement for Nitrogen and organic manure (FYM).
+- **Pulses (Chickpea, Lentil)**: 10-15 N (Low requirement due to N-fixation), 20-30 P, 15 K.
+
+### Micronutrient Management
+- **Zinc Deficiency**: Khaira disease in rice. Apply 10kg/acre Zinc Sulfate.
+- **Iron Deficiency**: Common in high pH (alkaline) soils. Foliar spray of Ferrous Sulfate (0.5%).
+- **Boron Deficiency**: Causes hollowing in cauliflower and poor fruit set in tomatoes. Apply Borax (4-5kg/acre).

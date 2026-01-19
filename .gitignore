@@ -38,6 +38,7 @@ venv.bak/
 *.joblib
 *.model
 *.weights
+*.keras
 
 # Dataset folders (uncomment if you want to exclude large datasets)
 # backend/dataset/

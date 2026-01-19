@@ -11,6 +11,7 @@ import WeatherTab from "@/components/dashboard/WeatherTab";
 import InsightsTab from "@/components/dashboard/InsightsTab";
 import ChatbotTab from "@/components/dashboard/ChatbotTab";
 import MarketRatesTab from "@/components/dashboard/MarketRatesTab";
+import YieldPredictionTab from "@/components/dashboard/YieldPredictionTab";
 
 interface FarmerData {
   name: string;
@@ -49,6 +50,8 @@ const Dashboard = () => {
         return <CropsTab />;
       case "market":
         return <MarketRatesTab />;
+      case "yield":
+        return <YieldPredictionTab />;
       case "recommendations":
         return <RecommendationsTab />;
       case "weather":
@@ -56,7 +59,7 @@ const Dashboard = () => {
       case "insights":
         return <InsightsTab />;
       case "chatbot":
-        return <ChatbotTab />;
+        return <ChatbotTab farmerData={farmerData} />;
       default:
         return <MyFarmTab farmerData={farmerData} />;
     }

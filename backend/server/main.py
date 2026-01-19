@@ -13,6 +13,7 @@ from recommendations import get_crop_recommendations
 from analysis import get_weather_analysis
 from market_rates import fetch_market_rates
 from disease_detection import detect_disease
+from yield_prediction import predict_yield, get_yield_metadata
 from database import SessionLocal, Farmer, SensorReading, init_db
 
 # Initialize Database
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 class ChatRequest(BaseModel):
     message: str
     location: str
+    state: Optional[str] = ""
 
 class ChatResponse(BaseModel):
     reply: str
@@ -106,7 +108,20 @@ class SensorReadingCreate(BaseModel):
     nitrogen: float
     phosphorus: float
     potassium: float
+    potassium: float
     temperature: float
+
+# Models for Yield Prediction
+class YieldPredictionRequest(BaseModel):
+    state: str
+    district: str
+    crop: str
+    season: str
+    area: float
+
+class YieldPredictionResponse(BaseModel):
+    predicted_yield: float
+    predicted_production: float
 
 # --- FastAPI Application ---
 app = FastAPI(title="CropWeather AI API")
@@ -136,7 +151,10 @@ async def chat(request: ChatRequest):
     """Endpoint to handle chatbot conversations."""
     try:
         reply = await run_in_threadpool(
-            get_bot_response, user_query=request.message, location=request.location
+            get_bot_response, 
+            user_query=request.message, 
+            location=request.location,
+            state=request.state
         )
         return ChatResponse(reply=reply)
     except Exception as e:
@@ -192,6 +210,37 @@ async def disease_detection_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         logger.error(f"Disease detection endpoint error: {e}")
         raise HTTPException(status_code=500, detail="An error occurred during disease detection.")
+
+@app.post("/api/yield-prediction", response_model=YieldPredictionResponse)
+async def yield_prediction(request: YieldPredictionRequest):
+    """Endpoint to predict crop yield."""
+    try:
+        result = await run_in_threadpool(
+            predict_yield,
+            state=request.state,
+            district=request.district,
+            crop=request.crop,
+            season=request.season,
+            area=request.area
+        )
+        return YieldPredictionResponse(**result)
+    except Exception as e:
+        logger.error(f"Yield prediction endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+@app.get("/api/yield-metadata")
+async def yield_metadata():
+    """Endpoint to get metadata for yield prediction dropdowns."""
+    try:
+        metadata = await run_in_threadpool(get_yield_metadata)
+        if not metadata:
+            raise HTTPException(status_code=404, detail="Metadata not found. Model might not be trained yet.")
+        return metadata
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Yield metadata endpoint error: {e}")
+        raise HTTPException(status_code=500, detail="Could not fetch metadata.")
 
 # --- Farmer & Sensor Data Endpoints ---
 

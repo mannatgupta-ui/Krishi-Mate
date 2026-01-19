@@ -4,39 +4,39 @@ import { Sparkles, TrendingUp, Droplets, Sun, Leaf } from "lucide-react";
 const recommendations = [
   {
     id: 1,
-    crop: "Mustard",
-    suitability: 95,
-    expectedYield: "12-15 quintals/acre",
+    crop: "Rice",
+    suitability: 99,
+    expectedYield: "20-25 quintals/acre",
     reasons: ["soil", "weather", "season"],
     isBestChoice: true,
-    emoji: "🌻",
-  },
-  {
-    id: 2,
-    crop: "Chickpea (Gram)",
-    suitability: 88,
-    expectedYield: "8-10 quintals/acre",
-    reasons: ["soil", "past crops"],
-    isBestChoice: false,
-    emoji: "🫘",
-  },
-  {
-    id: 3,
-    crop: "Barley",
-    suitability: 82,
-    expectedYield: "15-18 quintals/acre",
-    reasons: ["weather", "season"],
-    isBestChoice: false,
     emoji: "🌾",
   },
   {
+    id: 2,
+    crop: "Maize",
+    suitability: 92,
+    expectedYield: "15-20 quintals/acre",
+    reasons: ["soil", "weather"],
+    isBestChoice: false,
+    emoji: "🌽",
+  },
+  {
+    id: 3,
+    crop: "Coffee",
+    suitability: 85,
+    expectedYield: "5-8 quintals/acre",
+    reasons: ["weather", "season"],
+    isBestChoice: false,
+    emoji: "☕",
+  },
+  {
     id: 4,
-    crop: "Lentils",
+    crop: "Cotton",
     suitability: 78,
-    expectedYield: "6-8 quintals/acre",
+    expectedYield: "10-12 quintals/acre",
     reasons: ["soil"],
     isBestChoice: false,
-    emoji: "🥜",
+    emoji: "☁️",
   },
 ];
 
@@ -75,9 +75,8 @@ const RecommendationsTab = () => {
         {recommendations.map((rec, index) => (
           <motion.div
             key={rec.id}
-            className={`glass-card p-6 relative overflow-hidden hover-lift ${
-              rec.isBestChoice ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
-            }`}
+            className={`glass-card p-6 relative overflow-hidden hover-lift ${rec.isBestChoice ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+              }`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -124,11 +123,10 @@ const RecommendationsTab = () => {
                 {/* Suitability Bar */}
                 <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
                   <motion.div
-                    className={`h-full rounded-full ${
-                      rec.isBestChoice
+                    className={`h-full rounded-full ${rec.isBestChoice
                         ? "bg-gradient-to-r from-primary via-accent to-primary"
                         : "bg-primary"
-                    }`}
+                      }`}
                     initial={{ width: 0 }}
                     animate={{ width: `${rec.suitability}%` }}
                     transition={{ duration: 1, delay: index * 0.1 }}

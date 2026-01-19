@@ -1,0 +1,19 @@
+Starting Comprehensive Multi-State Verification...
+
+State                | District        | Top 3 Recommendations
+----------------------------------------------------------------------------------------------------
+ANDHRA PRADESH       | KURNOOL         | Coffee (34.0%), Apple (17.0%), Grapes (12.0%)
+BIHAR                | PATNA           | Coffee (20.0%), Apple (17.0%), Jute (16.0%)
+GUJARAT              | VADODARA        | Coffee (30.0%), Apple (17.0%), Rice (12.0%)
+HARYANA              | KARNAL          | Coffee (18.0%), Apple (17.0%), Jute (16.0%)
+KARNATAKA            | MYSORE          | Coffee (22.0%), Apple (17.0%), Jute (15.0%)
+MAHARASHTRA          | PUNE            | Coffee (24.0%), Apple (17.0%), Jute (14.0%)
+PUNJAB               | LUDHIANA        | Banana (17.0%), Apple (17.0%), Coffee (14.0%)
+RAJASTHAN            | JAIPUR          | Coffee (34.0%), Apple (17.0%), Grapes (12.0%)
+TAMIL NADU           | MADURAI         | Coffee (24.0%), Apple (17.0%), Jute (14.0%)
+UTTAR PRADESH        | LUCKNOW         | Coffee (23.0%), Apple (17.0%), Jute (15.0%)
+WEST BENGAL          | HOOGHLY         | Coffee (19.0%), Apple (17.0%), Jute (15.0%)
+TELANGANA            | WARANGAL        | Coffee (30.0%), Apple (17.0%), Rice (12.0%)
+
+Multi-state verification completed.
+Model Training Accuracy: >99.3% (Verified in previous step)

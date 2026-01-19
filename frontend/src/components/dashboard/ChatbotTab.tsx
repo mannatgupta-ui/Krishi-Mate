@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Mic, 
-  MicOff, 
-  Send, 
-  Camera, 
-  Image, 
-  Bot, 
-  User, 
+import {
+  Mic,
+  MicOff,
+  Send,
+  Camera,
+  Image,
+  Bot,
+  User,
   Loader2,
   X,
   Sparkles,
@@ -35,22 +35,19 @@ const quickQuestions = [
   "🌱 Fertilizer recommendations?",
 ];
 
-const botResponses: Record<string, string> = {
-  "best crop": "Based on your soil conditions and current season (Rabi), I recommend growing **Wheat** 🌾 or **Mustard** 🌻. These crops thrive in the current temperature range of 15-25°C and your soil moisture level of 72% is perfect!",
-  "water": "For your 5.2 acres of wheat crop, you'll need approximately **3,500-4,000 liters** of water per day during the growth phase. With your current soil moisture at 72%, irrigation every 2-3 days should be sufficient. 💧",
-  "pest": "Common pests this season include **Aphids** and **Army worms**. Here are some tips:\n\n🔹 Neem oil spray (5ml/liter)\n🔹 Yellow sticky traps\n🔹 Companion planting with marigolds\n🔹 Regular field monitoring every 3 days",
-  "market": "Current market rates in your area:\n\n🌾 Wheat: ₹2,275/quintal\n🌻 Mustard: ₹5,650/quintal\n🍚 Rice: ₹2,183/quintal\n🌽 Maize: ₹1,962/quintal\n\n*Prices updated 2 hours ago*",
-  "weather": "Weather forecast for the next 7 days:\n\n☀️ Today: 28°C, Sunny\n🌤️ Tomorrow: 26°C, Partly Cloudy\n☁️ Day 3: 24°C, Cloudy\n🌧️ Day 4-5: Light rain expected\n☀️ Day 6-7: Clear skies\n\n💡 Tip: Complete any spraying before Day 4!",
-  "fertilizer": "Based on your soil NPK analysis (N:85, P:72, K:78), I recommend:\n\n🌿 **Urea**: 50kg/acre (for Nitrogen boost)\n🌿 **DAP**: 25kg/acre (Phosphorus)\n🌿 **MOP**: 20kg/acre (Potassium)\n\nApply in the morning hours for best absorption!",
-  default: "I understand you're asking about farming! 🌱 I can help you with:\n\n• Crop recommendations\n• Irrigation guidance\n• Pest control\n• Market prices\n• Weather insights\n• Fertilizer tips\n\nWhat would you like to know more about?"
-};
+interface ChatbotTabProps {
+  farmerData: {
+    name: string;
+    location: string;
+  };
+}
 
-const ChatbotTab = () => {
+const ChatbotTab = ({ farmerData }: ChatbotTabProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       type: "bot",
-      content: "Namaste! 🙏 I'm your Krishi-Mate AI assistant. Ask me anything about your farm - crops, weather, pests, or market prices. You can type, speak, or even share photos of your crops!",
+      content: `Namaste ${farmerData.name || ""}! 🙏 I'm your Krishi-Mate AI assistant. I'm aware of your location in ${farmerData.location || "your area"}. Ask me anything about your farm - crops, weather, pests, or market prices!`,
       timestamp: new Date(),
     },
   ]);
@@ -68,17 +65,6 @@ const ChatbotTab = () => {
     }
   }, [messages]);
 
-  const generateResponse = (text: string): string => {
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes("crop") || lowerText.includes("season")) return botResponses["best crop"];
-    if (lowerText.includes("water") || lowerText.includes("irrigation")) return botResponses["water"];
-    if (lowerText.includes("pest") || lowerText.includes("insect") || lowerText.includes("bug")) return botResponses["pest"];
-    if (lowerText.includes("market") || lowerText.includes("price") || lowerText.includes("rate")) return botResponses["market"];
-    if (lowerText.includes("weather") || lowerText.includes("rain") || lowerText.includes("forecast")) return botResponses["weather"];
-    if (lowerText.includes("fertilizer") || lowerText.includes("nutrient") || lowerText.includes("npk")) return botResponses["fertilizer"];
-    return botResponses["default"];
-  };
-
   const handleSend = async () => {
     if (!inputText.trim() && !selectedImage) return;
 
@@ -95,20 +81,51 @@ const ChatbotTab = () => {
     setSelectedImage(null);
     setIsTyping(true);
 
-    // Simulate AI response delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      if (selectedImage) {
+        // Image processing could go to disease detection or a multimodal LLM
+        // For now, let's just simulate the response for image
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        setMessages((prev) => [...prev, {
+          id: (Date.now() + 1).toString(),
+          type: "bot",
+          content: "I can see the image of your crop! 📸 The leaves look healthy. Based on visual analysis, there are no immediate signs of disease. I've noted this in your farm profile.",
+          timestamp: new Date(),
+        }]);
+      } else {
+        // Real API call for text
+        const response = await fetch("http://localhost:8000/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: inputText,
+            location: farmerData.location || "Unknown",
+            state: "" // We could parse this if location is "District, State"
+          }),
+        });
 
-    const botMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      type: "bot",
-      content: selectedImage 
-        ? "I can see the image of your crop! 📸 The leaves look healthy with good color. Based on visual analysis:\n\n✅ No visible pest damage\n✅ Good leaf structure\n⚠️ Slight yellowing on edges - might need more nitrogen\n\nOverall health score: 85/100 🌟"
-        : generateResponse(inputText),
-      timestamp: new Date(),
-    };
+        if (!response.ok) throw new Error("Failed to fetch bot response");
+        const data = await response.json();
 
-    setMessages((prev) => [...prev, botMessage]);
-    setIsTyping(false);
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: "bot",
+          content: data.reply,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      setMessages((prev) => [...prev, {
+        id: (Date.now() + 1).toString(),
+        type: "bot",
+        content: "I'm having trouble connecting to my knowledge base. Please check your internet or try again later. 🌱",
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleVoiceInput = () => {
@@ -119,7 +136,7 @@ const ChatbotTab = () => {
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.lang = "en-IN";
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -171,10 +188,10 @@ const ChatbotTab = () => {
       const utterance = new SpeechSynthesisUtterance(plainText);
       utterance.lang = "en-IN";
       utterance.rate = 0.9;
-      
+
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
-      
+
       setIsSpeaking(true);
       window.speechSynthesis.speak(utterance);
     }
@@ -241,11 +258,10 @@ const ChatbotTab = () => {
                 transition={{ duration: 0.3 }}
                 className={`flex gap-3 ${message.type === "user" ? "flex-row-reverse" : ""}`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                  message.type === "user" 
-                    ? "bg-secondary text-secondary-foreground" 
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${message.type === "user"
+                    ? "bg-secondary text-secondary-foreground"
                     : "bg-primary/10 text-primary"
-                }`}>
+                  }`}>
                   {message.type === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
                 <div className={`max-w-[80%] ${message.type === "user" ? "text-right" : ""}`}>
@@ -258,11 +274,10 @@ const ChatbotTab = () => {
                       animate={{ opacity: 1 }}
                     />
                   )}
-                  <div className={`p-4 rounded-2xl ${
-                    message.type === "user"
+                  <div className={`p-4 rounded-2xl ${message.type === "user"
                       ? "bg-primary text-primary-foreground rounded-tr-sm"
                       : "glass-card rounded-tl-sm"
-                  }`}>
+                    }`}>
                     <p className="whitespace-pre-line text-sm leading-relaxed">
                       {message.content}
                     </p>
@@ -339,7 +354,7 @@ const ChatbotTab = () => {
           onChange={handleImageUpload}
           className="hidden"
         />
-        
+
         <motion.button
           onClick={() => fileInputRef.current?.click()}
           className="p-3 rounded-xl bg-muted hover:bg-muted/80 transition-colors"
@@ -351,11 +366,10 @@ const ChatbotTab = () => {
 
         <motion.button
           onClick={handleVoiceInput}
-          className={`p-3 rounded-xl transition-colors ${
-            isListening 
-              ? "bg-destructive text-destructive-foreground" 
+          className={`p-3 rounded-xl transition-colors ${isListening
+              ? "bg-destructive text-destructive-foreground"
               : "bg-muted hover:bg-muted/80"
-          }`}
+            }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           animate={isListening ? { scale: [1, 1.1, 1] } : {}}

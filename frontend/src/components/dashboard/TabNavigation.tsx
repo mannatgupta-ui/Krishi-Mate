@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Home, BarChart3, Leaf, Lightbulb, Cloud, Brain, MessageCircle, TrendingUp } from "lucide-react";
+import { Home, BarChart3, Leaf, Lightbulb, Cloud, Brain, MessageCircle, TrendingUp, Calculator } from "lucide-react";
 
 interface TabNavigationProps {
   activeTab: string;
@@ -10,7 +10,9 @@ const tabs = [
   { id: "farm", label: "My Farm", icon: Home, emoji: "🌾" },
   { id: "sensors", label: "Sensors", icon: BarChart3, emoji: "📊" },
   { id: "crops", label: "Crops", icon: Leaf, emoji: "🌱" },
+
   { id: "market", label: "Market", icon: TrendingUp, emoji: "💰" },
+  { id: "yield", label: "Predict Yield", icon: Calculator, emoji: "🌾" },
   { id: "recommendations", label: "Recommend", icon: Lightbulb, emoji: "💡" },
   { id: "weather", label: "Weather", icon: Cloud, emoji: "🌦" },
   { id: "insights", label: "Insights", icon: Brain, emoji: "🧠" },
@@ -29,11 +31,10 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
             <motion.button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`relative flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-                isActive
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
+              className={`relative flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${isActive
+                ? "text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
