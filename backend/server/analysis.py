@@ -1,107 +1,89 @@
-import random
+# analysis.py (Final Polished Version)
+import os
+import logging
+import json
+import re
 from typing import Dict, Any, List
+from dotenv import load_dotenv
 
-# Import our existing logic modules
-from weather import fetch_weather
 from chatbot2 import query_openrouter
+from weather_api import get_open_meteo_forecast
+
+load_dotenv()
+logger = logging.getLogger(__name__)
 
 def get_weather_analysis(location: str, crop: str) -> Dict[str, Any]:
     """
-    Generates a weather analysis dashboard including current weather,
-    a simulated forecast, and AI-powered insights.
+    Generates a weather dashboard and structured AI insights.
     """
     try:
-        # 1. Fetch REAL current weather data
-        current_weather_doc, current_weather_meta = fetch_weather(location)
-        current_weather = {
-            "temperature": float(current_weather_meta.get("temperature", 0)),
-            "humidity": float(current_weather_meta.get("humidity", 0)),
-            "rainfall": float(current_weather_meta.get("rainfall", 0)),
-            # Placeholder values for wind and condition
-            "windSpeed": random.randint(5, 15),
-            "condition": "Partly Cloudy",
-        }
+        # 1. Get real weather data
+        current_weather, forecast_data = get_open_meteo_forecast(location)
 
-        # 2. Simulate a 7-day forecast based on current weather
-        # (A real application would use a dedicated forecast API)
-        forecast = []
-        for i in range(7):
-            day_temp = current_weather["temperature"] + random.uniform(-3, 3)
-            day_rain = max(0, current_weather["rainfall"] + random.uniform(-2, 5) if i > 0 else current_weather["rainfall"])
-            conditions = ["sunny", "partly-cloudy", "cloudy", "light-rain", "rain"]
-            day_condition = random.choice(conditions)
-            
-            day_name = "Today" if i == 0 else f"Day {i + 1}"
-
-            forecast.append({
-                "day": day_name,
-                "temp": round(day_temp, 1),
-                "rain": round(day_rain, 1),
-                "condition": day_condition,
-            })
-
+        # 2. Create the detailed weather summary
+        weather_summary = f"The current weather is {current_weather['temperature']}°C with {current_weather['humidity']}% humidity. The 7-day forecast shows temperatures ranging from {min([d['temp'] for d in forecast_data]):.1f}°C to {max([d['temp'] for d in forecast_data]):.1f}°C."
+        
         # 3. Use the LLM to generate AI-powered insights
-        system_prompt = """You are a farming expert. Based on the provided weather data for a specific crop and location, generate exactly 3 brief, actionable insights. For each insight, you MUST provide a 'type' (warning, info, or success), a 'message', and a recommended 'action'. Format your response as a simple list of sentences, one insight per line, like this:
-        type: [type], message: [message], action: [action]
-        type: [type], message: [message], action: [action]
-        type: [type], message: [message], action: [action]"""
-
-        user_prompt = f"""Here is the weather data for {location}, where I am growing {crop}:
-        Current Weather: Temperature {current_weather['temperature']}°C, Humidity {current_weather['humidity']}%.
-        7-Day Forecast: Temperatures will range from {min([d['temp'] for d in forecast]):.1f}°C to {max([d['temp'] for d in forecast]):.1f}°C. Total expected rainfall over the next week is {sum([d['rain'] for d in forecast]):.1f}mm.
-
-        Based on this, provide 3 actionable insights for my {crop} crop."""
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-
+        system_prompt = """You are an expert agronomist. 
+        Your task is to generate exactly 3 actionable insights based on the weather data.
+        
+        CRITICAL: You must return the result as a VALID JSON ARRAY of objects. 
+        Do not include markdown formatting (like ```json). Just the raw JSON array.
+        
+        Each object must have exactly these fields:
+        - "type": one of "warning", "info", or "success"
+        - "message": A clear, descriptive headline (e.g., "High Risk of Fungal Infection").
+        - "action": A DETAILED recommendation (2-3 sentences) explaining exactly what steps the farmer should take and why. Be specific about treatments or cultural practices.
+        
+        Example format:
+        [
+            {"type": "warning", "message": "High Fungal Disease Risk", "action": "Due to high humidity, there is a risk of rust. Apply Propiconazole (Tilt) @ 1ml/liter immediately and ensure good drainage in the field to prevent water stagnation."},
+            {"type": "info", "message": "Ideal Sowing Conditions", "action": "The current temperature window of 20-25°C is perfect for sowing. Complete sowing within the next 3 days to maximize germination rates."}
+        ]"""
+        
+        user_prompt = f"""
+        Weather Data for {location}:
+        {weather_summary}
+        
+        Crop: {crop}
+        
+        Generate 3 structured insights now.
+        """
+        
+        messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
         response = query_openrouter(messages)
-        raw_insights = response["choices"][0]["message"]["content"]
+        raw_content = response["choices"][0]["message"]["content"]
+        
+        print(f"--- RAW AI RESPONSE ---\n{raw_content}\n-----------------------")
 
-        # 4. Parse the LLM's text response into structured data
+        # 4. Parse the JSON response
         insights = []
-        for line in raw_insights.strip().split('\n'):
-            line = line.strip()
-            if not line:
-                continue
+        try:
+            # Clean up potential markdown code blocks if the LLM ignores instructions
+            cleaned_content = raw_content.strip()
+            if cleaned_content.startswith("```json"):
+                cleaned_content = cleaned_content[7:]
+            if cleaned_content.endswith("```"):
+                cleaned_content = cleaned_content[:-3]
             
-            try:
-                # Simple parsing logic for "type: ..., message: ..., action: ..."
-                parts = [p.strip() for p in line.split(',')]
-                insight_type = parts[0].split(':')[1].strip()
-                insight_message = parts[1].split(':')[1].strip()
-                insight_action = parts[2].split(':')[1].strip()
+            insights = json.loads(cleaned_content.strip())
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse LLM JSON: {e}")
+            # Fallback logic if parsing strictly fails (could add regex parsing here if needed)
+            insights = [
+                {"type": "info", "message": "Weather analysis available", "action": "Check detailed forecast above."}
+            ]
 
-                if insight_type in ["warning", "info", "success"]:
-                    insights.append({
-                        "type": insight_type,
-                        "message": insight_message,
-                        "action": insight_action
-                    })
-            except IndexError:
-                # If parsing fails, skip this line
-                print(f"Could not parse insight line: {line}")
-
-        # Ensure we always have at least one placeholder insight if parsing fails
-        if not insights:
-            insights.append({
-                "type": "info",
-                "message": "Weather conditions are stable.",
-                "action": "Continue with your current farming schedule."
-            })
-
-        # 5. Assemble the final response object
+        # 5. Return structured data
         return {
             "currentWeather": current_weather,
-            "forecast": forecast,
-            "insights": insights[:3] # Ensure we only return 3 insights
+            "forecast": forecast_data,
+            "insights": insights[:3] 
         }
 
     except Exception as e:
-        print(f"Error getting weather analysis: {e}")
-        # Return a default error structure
+        logger.error(f"Error getting weather analysis: {e}")
         return {
             "currentWeather": {"temperature": 0, "humidity": 0, "rainfall": 0, "windSpeed": 0, "condition": "Error"},
             "forecast": [],

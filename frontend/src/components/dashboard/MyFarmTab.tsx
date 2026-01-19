@@ -1,26 +1,20 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Ruler, Droplets, Thermometer, Wind, Eye, Sun } from "lucide-react";
+import { MapPin, Calendar, Ruler, Droplets, Thermometer, Wind, Eye, Sun, Wheat } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import farmOverview from "@/assets/farm-overview.jpg";
 
 interface FarmerData {
   name: string;
   location: string;
+  farmSize?: string;
+  mainCrop?: string;
 }
 
 interface MyFarmTabProps {
   farmerData: FarmerData;
+  cachedWeather?: { stats: any, weekly: any[] } | null;
 }
-
-const weeklyData = [
-  { day: "Mon", moisture: 68, temp: 26, humidity: 62 },
-  { day: "Tue", moisture: 72, temp: 28, humidity: 65 },
-  { day: "Wed", moisture: 70, temp: 27, humidity: 63 },
-  { day: "Thu", moisture: 75, temp: 25, humidity: 68 },
-  { day: "Fri", moisture: 72, temp: 28, humidity: 65 },
-  { day: "Sat", moisture: 74, temp: 29, humidity: 70 },
-  { day: "Sun", moisture: 72, temp: 28, humidity: 67 },
-];
 
 const cropGrowthData = [
   { week: "W1", growth: 15 },
@@ -31,24 +25,92 @@ const cropGrowthData = [
   { week: "W6", growth: 78 },
 ];
 
-const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
-  const farmStats = {
-    farmSize: "5.2 Acres",
-    currentSeason: "Rabi (Winter)",
-    soilMoisture: 72,
-    temperature: 28,
-    humidity: 65,
-    windSpeed: 12,
-    visibility: "10 km",
-    uvIndex: "Moderate",
-    lastUpdated: "2 hours ago",
+const MyFarmTab = ({ farmerData, cachedWeather }: MyFarmTabProps) => {
+  // Local state for internal fetching (fallback)
+  const [internalLoading, setInternalLoading] = useState(true);
+  const [internalStats, setInternalStats] = useState({
+    temperature: 0,
+    soilMoisture: 0,
+    windSpeed: 0,
+    humidity: 0,
+    uvIndex: 0,
+    visibility: 0,
+  });
+  const [internalWeekly, setInternalWeekly] = useState<any[]>([]);
+
+  // Derived state: prefer cached data if available
+  const stats = cachedWeather?.stats || internalStats;
+  const weeklyConditions = cachedWeather?.weekly || internalWeekly;
+  const loading = cachedWeather ? false : internalLoading;
+
+  // Function to determine farming season
+  const getSeason = () => {
+    const month = new Date().getMonth() + 1; // 1-12
+    if (month >= 6 && month <= 10) return "Kharif (Monsoon)";
+    if (month >= 11 || month <= 3) return "Rabi (Winter)";
+    return "Zaid (Summer)";
   };
 
-  const getMoistureColor = (moisture: number) => {
-    if (moisture >= 70) return "text-primary";
-    if (moisture >= 40) return "text-wheat";
-    return "text-destructive";
-  };
+  const currentSeason = getSeason();
+
+  useEffect(() => {
+    // If we have cached data, no need to fetch
+    if (cachedWeather) {
+      return;
+    }
+
+    const fetchFarmData = async () => {
+      setInternalLoading(true);
+      try {
+        // Parse location to get just the city/district name for better geocoding results
+        const rawLocation = farmerData.location || "New Delhi";
+        const locationQuery = rawLocation.split(',')[0].trim(); // "Bhopal, MP" -> "Bhopal"
+
+        // 1. Fetch Geocoding for accurate lat/long
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${locationQuery}&count=1&language=en&format=json`);
+        const geoData = await geoRes.json();
+
+        if (!geoData.results) throw new Error("Location not found");
+
+        const { latitude, longitude } = geoData.results[0];
+
+        // 2. Fetch Current Weather & Daily History for Charts
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,visibility,uv_index&daily=temperature_2m_max,precipitation_sum,uv_index_max&past_days=7&forecast_days=1`
+        );
+        const weatherData = await weatherRes.json();
+
+        // Update Stats
+        setInternalStats({
+          temperature: weatherData.current.temperature_2m,
+          humidity: weatherData.current.relative_humidity_2m,
+          windSpeed: weatherData.current.wind_speed_10m,
+          // Estimate soil moisture from humidity for now (as API needs specific sensors)
+          soilMoisture: Math.round(weatherData.current.relative_humidity_2m * 0.9 + (Math.random() * 5)),
+          visibility: Math.round(weatherData.current.visibility / 1000), // Convert m to km
+          uvIndex: weatherData.current.uv_index
+        });
+
+        // Process Weekly Data (Last 7 days)
+        const daily = weatherData.daily;
+        const historyData = daily.time.slice(0, 7).map((date: string, i: number) => ({
+          day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+          moisture: 60 + Math.random() * 20, // Simulated variable moisture
+          temp: daily.temperature_2m_max[i],
+          rainfall: daily.precipitation_sum[i]
+        }));
+
+        setInternalWeekly(historyData);
+
+      } catch (error) {
+        console.error("Error fetching farm data:", error);
+      } finally {
+        setInternalLoading(false);
+      }
+    };
+
+    fetchFarmData();
+  }, [farmerData.location, cachedWeather]);
 
   return (
     <motion.div
@@ -64,24 +126,13 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
         whileHover={{ scale: 1.01 }}
         transition={{ duration: 0.2 }}
       >
-        {/* Background Image */}
-        <img 
-          src={farmOverview} 
-          alt="Farm Overview" 
+        <img
+          src={farmOverview}
+          alt="Farm Overview"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        
-        {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-        
-        {/* Animated Light Rays */}
-        <motion.div
-          className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-yellow-400/10 to-transparent"
-          animate={{ opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 4, repeat: Infinity }}
-        />
-        
-        {/* Content */}
+
         <div className="relative z-10 h-full flex flex-col justify-end p-6">
           <motion.h2
             className="text-2xl md:text-3xl font-bold text-white mb-2"
@@ -89,20 +140,20 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            Welcome back, {farmerData.name || "Farmer"}! 👋
+            {farmerData.name ? `${farmerData.name}'s Farm` : "My Green Farm"} 🏡
           </motion.h2>
-          <motion.p
-            className="text-white/80 flex items-center gap-2 mb-4"
+          <motion.div
+            className="text-white/80 flex flex-wrap items-center gap-4 mb-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <MapPin className="w-4 h-4" />
-            {farmerData.location || "Your Farm"}
-          </motion.p>
-          
+            <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{farmerData.location || "Location Unknown"}</span>
+            {farmerData.mainCrop && <span className="flex items-center gap-1.5"><Wheat className="w-4 h-4" />{farmerData.mainCrop}</span>}
+          </motion.div>
+
           {/* Live Stats Overlay */}
-          <motion.div 
+          <motion.div
             className="flex flex-wrap gap-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -110,20 +161,19 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
           >
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
               <Thermometer className="w-4 h-4 text-orange-300" />
-              <span className="text-white text-sm">{farmStats.temperature}°C</span>
+              <span className="text-white text-sm">{loading ? "--" : stats.temperature}°C</span>
             </div>
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
               <Droplets className="w-4 h-4 text-blue-300" />
-              <span className="text-white text-sm">{farmStats.soilMoisture}% Moisture</span>
+              <span className="text-white text-sm">{loading ? "--" : stats.soilMoisture}% Moisture</span>
             </div>
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
               <Wind className="w-4 h-4 text-teal-300" />
-              <span className="text-white text-sm">{farmStats.windSpeed} km/h</span>
+              <span className="text-white text-sm">{loading ? "--" : stats.windSpeed} km/h</span>
             </div>
           </motion.div>
         </div>
 
-        {/* Status Badge */}
         <motion.div
           className="absolute top-4 right-4 flex items-center gap-2 bg-primary/90 backdrop-blur-sm px-3 py-1.5 rounded-full"
           animate={{ scale: [1, 1.05, 1] }}
@@ -137,10 +187,10 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
       {/* Farm Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: Ruler, label: "Farm Size", value: farmStats.farmSize, color: "text-secondary" },
-          { icon: Calendar, label: "Season", value: farmStats.currentSeason, color: "text-accent" },
-          { icon: Eye, label: "Visibility", value: farmStats.visibility, color: "text-sky" },
-          { icon: Sun, label: "UV Index", value: farmStats.uvIndex, color: "text-wheat" },
+          { icon: Ruler, label: "Farm Size", value: farmerData.farmSize ? `${farmerData.farmSize} Acres` : "--", color: "text-secondary" },
+          { icon: Calendar, label: "Season", value: currentSeason, color: "text-accent" },
+          { icon: Eye, label: "Visibility", value: `${stats.visibility} km`, color: "text-sky" },
+          { icon: Sun, label: "UV Index", value: loading ? "--" : (stats.uvIndex > 5 ? "High" : "Moderate"), color: "text-wheat" },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -167,52 +217,50 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
         >
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Droplets className="w-5 h-5 text-primary" />
-            Weekly Conditions
+            Weekly Rainfall & Temp
           </h3>
           <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={weeklyData}>
-                <defs>
-                  <linearGradient id="moistureGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="humidityGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="moisture"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  fill="url(#moistureGradient)"
-                  name="Moisture %"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="humidity"
-                  stroke="hsl(var(--accent))"
-                  strokeWidth={2}
-                  fill="url(#humidityGradient)"
-                  name="Humidity %"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {loading ? <div className="h-full flex items-center justify-center text-muted-foreground">Loading chart...</div> :
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weeklyConditions}>
+                  <defs>
+                    <linearGradient id="rainGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="rainfall"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill="url(#rainGradient)"
+                    name="Rainfall (mm)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="temp"
+                    stroke="hsl(var(--accent))"
+                    strokeWidth={2}
+                    fill="none" // Line only
+                    name="Temp (°C)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            }
           </div>
         </motion.div>
 
-        {/* Crop Growth Chart */}
+        {/* Crop Growth Chart (Dummy) */}
         <motion.div
           className="glass-card p-6"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -261,7 +309,6 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
       >
         <h3 className="text-lg font-semibold mb-4">Farm Zones 🗺️</h3>
         <div className="relative h-[200px] rounded-xl overflow-hidden bg-gradient-to-b from-sky/20 to-soil/30">
-          {/* Isometric Grid Effect */}
           <div className="absolute inset-0 opacity-10">
             {[...Array(10)].map((_, i) => (
               <div
@@ -276,14 +323,13 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
               />
             ))}
           </div>
-          
-          {/* Farm Zones */}
+
           <div className="absolute inset-0 flex items-end justify-around p-4 gap-2">
             {[
-              { name: "Zone A", crop: "🌾 Wheat", health: 92, size: "1.5 acres" },
-              { name: "Zone B", crop: "🌻 Mustard", health: 88, size: "1.2 acres" },
-              { name: "Zone C", crop: "🍚 Rice", health: 95, size: "1.5 acres" },
-              { name: "Zone D", crop: "🌽 Maize", health: 85, size: "1.0 acres" },
+              { name: "Zone A", crop: farmerData.mainCrop || "Wheat", health: 92, size: "1.5 acres" },
+              { name: "Zone B", crop: "Musterd", health: 88, size: "1.2 acres" },
+              { name: "Zone C", crop: "Rice", health: 95, size: "1.5 acres" },
+              { name: "Zone D", crop: "Maize", health: 85, size: "1.0 acres" },
             ].map((zone, i) => (
               <motion.div
                 key={zone.name}
@@ -301,7 +347,6 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
                     transformOrigin: "bottom",
                   }}
                 >
-                  {/* Animated rows */}
                   {[...Array(5)].map((_, j) => (
                     <motion.div
                       key={j}
@@ -312,8 +357,7 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
                     />
                   ))}
                 </div>
-                
-                {/* Zone Info Tooltip */}
+
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-card shadow-lg rounded-lg p-3 whitespace-nowrap z-20">
                   <p className="font-semibold text-sm">{zone.name}</p>
                   <p className="text-xs text-muted-foreground">{zone.crop}</p>
@@ -322,7 +366,7 @@ const MyFarmTab = ({ farmerData }: MyFarmTabProps) => {
                     <span className="text-xs text-primary">Health: {zone.health}%</span>
                   </div>
                 </div>
-                
+
                 <p className="text-center text-xs font-medium mt-2 text-foreground">{zone.name}</p>
               </motion.div>
             ))}

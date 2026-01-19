@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from 'react-markdown';
 import {
   Mic,
   MicOff,
@@ -12,13 +13,15 @@ import {
   X,
   Sparkles,
   Volume2,
-  VolumeX
+  VolumeX,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface Message {
+export interface Message {
   id: string;
   type: "user" | "bot";
   content: string;
@@ -40,24 +43,36 @@ interface ChatbotTabProps {
     name: string;
     location: string;
   };
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
-const ChatbotTab = ({ farmerData }: ChatbotTabProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      type: "bot",
-      content: `Namaste ${farmerData.name || ""}! 🙏 I'm your Krishi-Mate AI assistant. I'm aware of your location in ${farmerData.location || "your area"}. Ask me anything about your farm - crops, weather, pests, or market prices!`,
-      timestamp: new Date(),
-    },
-  ]);
+const ChatbotTab = ({ farmerData, messages, setMessages }: ChatbotTabProps) => {
+  // Local state removed, using props
   const [inputText, setInputText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize welcome message if empty
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: "welcome",
+          type: "bot",
+          content: `Namaste ${farmerData.name || ""}! 🙏 I'm your Krishi-Mate AI assistant. I'm aware of your location in ${farmerData.location || "your area"}. Ask me anything about your farm - crops, weather, pests, or market prices!`,
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  }, []); // Run once on mount (of this component instance), but technically it mounts every time tab switches. 
+  // If tab switches, messages might be empty if we didn't persist it. But we ARE persisting it in Dashboard.
+  // So if Dashboard has messages, this won't overwrite. If Dashboard is empty (first load), this populates.
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -207,43 +222,59 @@ const ChatbotTab = ({ farmerData }: ChatbotTabProps) => {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col h-[calc(100vh-200px)] max-h-[700px]"
+      className={
+        isFullscreen
+          ? "fixed inset-0 z-50 bg-background p-6 h-screen w-screen flex flex-col"
+          : "flex flex-col h-[calc(100vh-200px)] max-h-[700px]"
+      }
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <motion.div
-          className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center"
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <Bot className="w-6 h-6 text-primary-foreground" />
-        </motion.div>
-        <div>
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            Krishi AI Assistant
-            <Sparkles className="w-5 h-5 text-wheat" />
-          </h2>
-          <p className="text-sm text-muted-foreground">Voice • Photo • Chat</p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <motion.div
+            className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Bot className="w-6 h-6 text-primary-foreground" />
+          </motion.div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              Krishi AI Assistant
+              <Sparkles className="w-5 h-5 text-wheat" />
+            </h2>
+            <p className="text-sm text-muted-foreground">Voice • Photo • Chat</p>
+          </div>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          className="hover:bg-muted"
+        >
+          {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+        </Button>
       </div>
 
-      {/* Quick Questions */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-        {quickQuestions.map((question, index) => (
-          <motion.button
-            key={question}
-            onClick={() => handleQuickQuestion(question)}
-            className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-full whitespace-nowrap transition-colors"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {question}
-          </motion.button>
-        ))}
-      </div>
+      {/* Quick Questions - Hidden in Fullscreen */}
+      {!isFullscreen && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+          {quickQuestions.map((question, index) => (
+            <motion.button
+              key={question}
+              onClick={() => handleQuickQuestion(question)}
+              className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-full whitespace-nowrap transition-colors"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {question}
+            </motion.button>
+          ))}
+        </div>
+      )}
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
@@ -259,8 +290,8 @@ const ChatbotTab = ({ farmerData }: ChatbotTabProps) => {
                 className={`flex gap-3 ${message.type === "user" ? "flex-row-reverse" : ""}`}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${message.type === "user"
-                    ? "bg-secondary text-secondary-foreground"
-                    : "bg-primary/10 text-primary"
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-primary/10 text-primary"
                   }`}>
                   {message.type === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
@@ -275,12 +306,22 @@ const ChatbotTab = ({ farmerData }: ChatbotTabProps) => {
                     />
                   )}
                   <div className={`p-4 rounded-2xl ${message.type === "user"
-                      ? "bg-primary text-primary-foreground rounded-tr-sm"
-                      : "glass-card rounded-tl-sm"
+                    ? "bg-primary text-primary-foreground rounded-tr-sm"
+                    : "glass-card rounded-tl-sm"
                     }`}>
-                    <p className="whitespace-pre-line text-sm leading-relaxed">
-                      {message.content}
-                    </p>
+                    <div className="prose dark:prose-invert text-sm leading-relaxed max-w-none break-words">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                          li: ({ node, ...props }) => <li className="ml-4 list-disc" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="mb-2" {...props} />,
+                          h3: ({ node, ...props }) => <h3 className="font-bold text-lg mt-2 mb-1" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-bold" {...props} />
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                   {message.type === "bot" && (
                     <motion.button
@@ -367,8 +408,8 @@ const ChatbotTab = ({ farmerData }: ChatbotTabProps) => {
         <motion.button
           onClick={handleVoiceInput}
           className={`p-3 rounded-xl transition-colors ${isListening
-              ? "bg-destructive text-destructive-foreground"
-              : "bg-muted hover:bg-muted/80"
+            ? "bg-destructive text-destructive-foreground"
+            : "bg-muted hover:bg-muted/80"
             }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}

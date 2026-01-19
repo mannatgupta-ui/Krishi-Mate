@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List, Any
 import pandas as pd
-from .crop_recommendation import predict_crop_recommendation
+from crop_recommendation import predict_crop_recommendation
 
 def get_crop_recommendations(district: str, state: Optional[str] = None) -> Dict[str, List[Dict[str, Any]]]:
     """

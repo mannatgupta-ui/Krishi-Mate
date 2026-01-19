@@ -17,6 +17,8 @@ interface FarmerData {
   name: string;
   mobile: string;
   location: string;
+  mainCrop?: string;
+  farmSize?: string;
 }
 
 const Dashboard = () => {
@@ -28,12 +30,137 @@ const Dashboard = () => {
     location: "",
   });
 
+  // Cached Data States
+  const [weatherData, setWeatherData] = useState<{ stats: any, weekly: any[] } | null>(null);
+  const [marketData, setMarketData] = useState<any[] | null>(null);
+  const [insightsData, setInsightsData] = useState<any | null>(null);
+  const [weatherAnalysisData, setWeatherAnalysisData] = useState<any | null>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+
   useEffect(() => {
     const stored = localStorage.getItem("farmerData");
     if (stored) {
       setFarmerData(JSON.parse(stored));
     }
   }, []);
+
+  // Fetch Data on Component Mount (or when location changes)
+  useEffect(() => {
+    if (!farmerData.location) return;
+
+    const fetchDashboardData = async () => {
+      // 1. Fetch Weather Data (MyFarmTab)
+      if (!weatherData) {
+        console.log("Dashboard: Fetching weather data for", farmerData.location);
+        try {
+          // Parse location to get just the city/district name for better geocoding results
+          const rawLocation = farmerData.location || "New Delhi";
+          const locationQuery = rawLocation.split(',')[0].trim(); // "Bhopal, MP" -> "Bhopal"
+
+          const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${locationQuery}&count=1&language=en&format=json`);
+          const geoData = await geoRes.json();
+
+          if (geoData.results) {
+            const { latitude, longitude } = geoData.results[0];
+            const weatherRes = await fetch(
+              `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,visibility,uv_index&daily=temperature_2m_max,precipitation_sum,uv_index_max&past_days=7&forecast_days=1`
+            );
+            const wData = await weatherRes.json();
+
+            const stats = {
+              temperature: wData.current.temperature_2m,
+              humidity: wData.current.relative_humidity_2m,
+              windSpeed: wData.current.wind_speed_10m,
+              soilMoisture: Math.round(wData.current.relative_humidity_2m * 0.9 + (Math.random() * 5)),
+              visibility: Math.round(wData.current.visibility / 1000),
+              uvIndex: wData.current.uv_index
+            };
+
+            const daily = wData.daily;
+            const weekly = daily.time.slice(0, 7).map((date: string, i: number) => ({
+              day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+              moisture: 60 + Math.random() * 20,
+              temp: daily.temperature_2m_max[i],
+              rainfall: daily.precipitation_sum[i]
+            }));
+
+            setWeatherData({ stats, weekly });
+          } else {
+            console.warn("Dashboard: Location not found for", location);
+          }
+        } catch (e) {
+          console.error("Dashboard: Error fetching weather", e);
+        }
+      } else {
+        console.log("Dashboard: Using cached weather data");
+      }
+
+      // 2. Fetch Market Data
+      if (!marketData) {
+        try {
+          const parts = farmerData.location.split(",").map(s => s.trim());
+          const district = parts.length >= 2 ? parts[0] : "";
+          const state = parts.length >= 2 ? parts[1] : "";
+
+          const response = await fetch("http://localhost:8000/api/market-rates", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state, district }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setMarketData(data);
+          }
+        } catch (e) {
+          console.error("Dashboard: Error fetching market rates", e);
+        }
+      }
+
+      // 3. Fetch General Insights
+      if (!insightsData) {
+        try {
+          const response = await fetch("http://localhost:8000/api/general-insights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              location: farmerData.location || "India",
+              count: 5
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setInsightsData(data);
+          }
+        } catch (e) {
+          console.error("Dashboard: Error fetching insights", e);
+        }
+      }
+
+      // 4. Fetch Weather Analysis
+      if (!weatherAnalysisData) {
+        try {
+          const response = await fetch("http://localhost:8000/api/weather-analysis", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              location: farmerData.location || "Delhi",
+              crop: farmerData.mainCrop || "Wheat" // Use mainCrop from farmerData if available
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setWeatherAnalysisData(data);
+          }
+        } catch (e) {
+          console.error("Dashboard: Error fetching weather analysis", e);
+        }
+      }
+    };
+
+    fetchDashboardData();
+  }, [farmerData.location]); // Only re-run if location changes
 
   const handleLogout = () => {
     localStorage.removeItem("farmerData");
@@ -43,25 +170,25 @@ const Dashboard = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "farm":
-        return <MyFarmTab farmerData={farmerData} />;
+        return <MyFarmTab farmerData={farmerData} cachedWeather={weatherData} />;
       case "sensors":
         return <SensorsTab />;
       case "crops":
         return <CropsTab />;
       case "market":
-        return <MarketRatesTab />;
+        return <MarketRatesTab farmerData={farmerData} cachedMarketData={marketData} />;
       case "yield":
         return <YieldPredictionTab />;
       case "recommendations":
-        return <RecommendationsTab />;
+        return <RecommendationsTab farmerData={farmerData} />;
       case "weather":
-        return <WeatherTab />;
+        return <WeatherTab farmerData={farmerData} cachedWeatherAnalysis={weatherAnalysisData} />;
       case "insights":
-        return <InsightsTab />;
+        return <InsightsTab farmerData={farmerData} cachedInsights={insightsData} />;
       case "chatbot":
-        return <ChatbotTab farmerData={farmerData} />;
+        return <ChatbotTab farmerData={farmerData} messages={chatMessages} setMessages={setChatMessages} />;
       default:
-        return <MyFarmTab farmerData={farmerData} />;
+        return <MyFarmTab farmerData={farmerData} cachedWeather={weatherData} />;
     }
   };
 

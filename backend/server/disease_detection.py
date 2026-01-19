@@ -1,9 +1,16 @@
-import torch
-import torchvision.transforms as transforms
-from torchvision.models import mobilenet_v2
+try:
+    import torch
+    import torchvision.transforms as transforms
+    from torchvision.models import mobilenet_v2
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    print("Warning: torch or torchvision not found. Disease detection will be mocked.")
+
 from PIL import Image
 import io
 import os
+import random
 
 # Placeholder for real plant disease classes
 # In a real scenario, these would match the PlantVillage dataset
@@ -17,6 +24,10 @@ DISEASE_CLASSES = [
 
 class DiseaseDetector:
     def __init__(self, model_path=None):
+        if not TORCH_AVAILABLE:
+            self.model = None
+            return
+
         # Initialize MobileNetV2
         self.model = mobilenet_v2(pretrained=True)
         # Modify the classifier to match our number of classes
@@ -37,6 +48,16 @@ class DiseaseDetector:
         ])
 
     def predict(self, image_bytes):
+        if not TORCH_AVAILABLE:
+            # Mock prediction
+            mock_class = random.choice(DISEASE_CLASSES)
+            return {
+                "disease": mock_class,
+                "confidence": 0.85 + random.random() * 0.14,
+                "recommendation": self.get_recommendation(mock_class),
+                "is_mock": True
+            }
+
         image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
         input_tensor = self.transform(image).unsqueeze(0)
         

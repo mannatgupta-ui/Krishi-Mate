@@ -90,9 +90,9 @@ class MarketRecord(BaseModel):
     variety: str
     grade: str
     arrival_date: str
-    min_price: str
-    max_price: str
-    modal_price: str
+    min_price: Any
+    max_price: Any
+    modal_price: Any
 
 # Models for Farmer and Sensors
 class FarmerCreate(BaseModel):
@@ -153,8 +153,7 @@ async def chat(request: ChatRequest):
         reply = await run_in_threadpool(
             get_bot_response, 
             user_query=request.message, 
-            location=request.location,
-            state=request.state
+            location=request.location
         )
         return ChatResponse(reply=reply)
     except Exception as e:
@@ -181,6 +180,7 @@ async def weather_analysis(request: WeatherAnalysisRequest):
             get_weather_analysis, location=request.location, crop=request.crop
         )
         return WeatherAnalysisResponse(**analysis_data)
+
     except Exception as e:
         logger.error(f"Weather analysis endpoint error: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while generating the weather analysis.")
@@ -276,6 +276,36 @@ async def add_sensor_reading(reading: SensorReadingCreate):
         return new_reading
     finally:
         db.close()
+
+
+# General Insights Endpoint
+from general_insights import get_general_insights
+
+class GeneralInsight(BaseModel):
+    type: str # tip, success, warning
+    title: str
+    description: str
+    priority: str # high, medium, low
+
+class GeneralInsightsRequest(BaseModel):
+    location: str
+    count: int = 5
+
+@app.post("/api/general-insights")
+def get_insights(request: GeneralInsightsRequest):
+    insights_data = get_general_insights(request.location, request.count)
+    
+    # Calculate stats
+    active_alerts = sum(1 for i in insights_data if i.get("type") == "warning" or i.get("priority") == "high")
+    
+    return {
+        "insights": insights_data,
+        "stats": {
+            "tipsApplied": 0,
+            "issuesResolved": 0,
+            "activeAlerts": active_alerts
+        }
+    }
 
 
 if __name__ == '__main__':
