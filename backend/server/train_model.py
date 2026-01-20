@@ -1,9 +1,11 @@
 import os
+import json
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications import EfficientNetV2B2
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 
 # =========================
 # PATHS
@@ -19,22 +21,26 @@ TEST_DIR = os.path.join(DATASET_DIR, "test")
 # CONFIG
 # =========================
 IMG_SIZE = (224, 224)
-BATCH_SIZE = 32
+BATCH_SIZE = 16  # EfficientNetV2B2 might need smaller batch size for 224x224 on standard GPUs
 EPOCHS_STAGE_1 = 5
-EPOCHS_STAGE_2 = 10
+EPOCHS_STAGE_2 = 25
 
 # =========================
 # DATA GENERATORS
 # =========================
+# EfficientNetV2 expects inputs in [0, 255], so NO rescale=1./255
 train_gen = ImageDataGenerator(
-    rescale=1.0 / 255,
-    rotation_range=25,
+    rotation_range=30,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
     zoom_range=0.2,
-    horizontal_flip=True
+    horizontal_flip=True,
+    fill_mode="nearest"
 )
 
-val_gen = ImageDataGenerator(rescale=1.0 / 255)
-test_gen = ImageDataGenerator(rescale=1.0 / 255)
+val_gen = ImageDataGenerator() # No rescale
+test_gen = ImageDataGenerator() # No rescale
 
 train_data = train_gen.flow_from_directory(
     TRAIN_DIR,
@@ -61,9 +67,9 @@ test_data = test_gen.flow_from_directory(
 NUM_CLASSES = train_data.num_classes
 
 # =========================
-# MODEL – RESNET50
+# MODEL – EFFICIENTNET V2 B2
 # =========================
-base_model = ResNet50(
+base_model = EfficientNetV2B2(
     weights="imagenet",
     include_top=False,
     input_shape=(224, 224, 3)
@@ -75,10 +81,36 @@ base_model.trainable = False
 x = base_model.output
 x = GlobalAveragePooling2D()(x)
 x = Dense(512, activation="relu")(x)
-x = Dropout(0.5)(x)
+x = Dropout(0.3)(x) # Slightly reduced dropout for EfficientNet
 outputs = Dense(NUM_CLASSES, activation="softmax")(x)
 
 model = Model(inputs=base_model.input, outputs=outputs)
+
+# =========================
+# CALLBACKS
+# =========================
+checkpoint = ModelCheckpoint(
+    "plant_disease_efficientnetv2b2.keras",
+    monitor="val_accuracy",
+    save_best_only=True,
+    mode="max",
+    verbose=1
+)
+
+reduce_lr = ReduceLROnPlateau(
+    monitor="val_loss",
+    factor=0.2,
+    patience=3,
+    min_lr=1e-6,
+    verbose=1
+)
+
+early_stop = EarlyStopping(
+    monitor="val_accuracy",
+    patience=7,
+    restore_best_weights=True,
+    verbose=1
+)
 
 # =========================
 # STAGE 1 TRAINING
@@ -89,33 +121,42 @@ model.compile(
     metrics=["accuracy"]
 )
 
+print("\n🚀 Starting Stage 1: Frozen Base Model...")
 model.fit(
     train_data,
     validation_data=val_data,
-    epochs=EPOCHS_STAGE_1
+    epochs=EPOCHS_STAGE_1,
+    callbacks=[checkpoint]
 )
 
 # =========================
 # FINE TUNING – STAGE 2
 # =========================
-for layer in base_model.layers[-40:]:
-    layer.trainable = True
+# Unfreeze top layers
+base_model.trainable = True
 
+# Fine-tune with a very low learning rate
 model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
     loss="categorical_crossentropy",
     metrics=["accuracy"]
 )
 
+print("\n🚀 Starting Stage 2: Fine Tuning...")
 model.fit(
     train_data,
     validation_data=val_data,
-    epochs=EPOCHS_STAGE_2
+    epochs=EPOCHS_STAGE_2,
+    callbacks=[checkpoint, reduce_lr, early_stop]
 )
 
 # =========================
-# SAVE MODEL
+# SAVE METADATA
 # =========================
-model.save("plant_disease_resnet50.keras")
+# Save class indices for inference mapping
+with open("disease_class_indices.json", "w") as f:
+    json.dump(train_data.class_indices, f)
 
-print("✅ Training complete. Model saved as plant_disease_resnet50.keras")
+model.save("plant_disease_efficientnetv2b2.keras")
+
+print("✅ Training complete. Model saved as plant_disease_efficientnetv2b2.keras")

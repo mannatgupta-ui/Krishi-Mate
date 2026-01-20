@@ -92,19 +92,31 @@ const ChatbotTab = ({ farmerData, messages, setMessages }: ChatbotTabProps) => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputText("");
     setSelectedImage(null);
+    setSelectedFile(null);
     setIsTyping(true);
 
     try {
-      if (selectedImage) {
-        // Image processing could go to disease detection or a multimodal LLM
-        // For now, let's just simulate the response for image
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const response = await fetch("http://localhost:8000/api/detect-disease", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error("Failed to analyze image");
+
+        const data = await response.json();
+        // data = { disease: "...", confidence: 0.99, recommendation: "..." }
+
         setMessages((prev) => [...prev, {
           id: (Date.now() + 1).toString(),
           type: "bot",
-          content: "I can see the image of your crop! 📸 The leaves look healthy. Based on visual analysis, there are no immediate signs of disease. I've noted this in your farm profile.",
+          content: `I've analyzed your crop image. 🍃\n\n**Diagnosis**: ${data.disease}\n**Confidence**: ${(data.confidence * 100).toFixed(1)}%\n\n**Recommendation**: ${data.recommendation}`,
           timestamp: new Date(),
         }]);
       } else {
@@ -183,6 +195,7 @@ const ChatbotTab = ({ farmerData, messages, setMessages }: ChatbotTabProps) => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
@@ -292,6 +305,8 @@ const ChatbotTab = ({ farmerData, messages, setMessages }: ChatbotTabProps) => {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${message.type === "user"
                   ? "bg-secondary text-secondary-foreground"
                   : "bg-primary/10 text-primary"
+                    ? "bg-secondary text-secondary-foreground"
+                    : "bg-primary/10 text-primary"
                   }`}>
                   {message.type === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
@@ -308,6 +323,8 @@ const ChatbotTab = ({ farmerData, messages, setMessages }: ChatbotTabProps) => {
                   <div className={`p-4 rounded-2xl ${message.type === "user"
                     ? "bg-primary text-primary-foreground rounded-tr-sm"
                     : "glass-card rounded-tl-sm"
+                      ? "bg-primary text-primary-foreground rounded-tr-sm"
+                      : "glass-card rounded-tl-sm"
                     }`}>
                     <div className="prose dark:prose-invert text-sm leading-relaxed max-w-none break-words">
                       <ReactMarkdown
@@ -378,7 +395,10 @@ const ChatbotTab = ({ farmerData, messages, setMessages }: ChatbotTabProps) => {
         >
           <img src={selectedImage} alt="Preview" className="w-full h-full object-cover rounded-xl" />
           <button
-            onClick={() => setSelectedImage(null)}
+            onClick={() => {
+              setSelectedImage(null);
+              setSelectedFile(null);
+            }}
             className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
           >
             <X className="w-4 h-4" />
@@ -410,6 +430,8 @@ const ChatbotTab = ({ farmerData, messages, setMessages }: ChatbotTabProps) => {
           className={`p-3 rounded-xl transition-colors ${isListening
             ? "bg-destructive text-destructive-foreground"
             : "bg-muted hover:bg-muted/80"
+              ? "bg-destructive text-destructive-foreground"
+              : "bg-muted hover:bg-muted/80"
             }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
