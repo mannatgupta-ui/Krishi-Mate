@@ -43,37 +43,8 @@ const WeatherTab = ({ farmerData, cachedWeatherAnalysis }: WeatherTabProps) => {
       setForecast(cachedWeatherAnalysis.forecast);
       setInsights(cachedWeatherAnalysis.insights);
       setLoading(false);
-      return;
     }
-
-    const fetchWeatherData = async () => {
-      try {
-        // Default to Wheat if no crop specified in context yet
-        const response = await fetch("http://localhost:8000/api/weather-analysis", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: farmerData.location || "Delhi",
-            crop: "Wheat"
-          }),
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch weather data");
-
-        const data = await response.json();
-        setCurrentWeather(data.currentWeather);
-        setForecast(data.forecast);
-        setInsights(data.insights);
-      } catch (err) {
-        console.error(err);
-        setError("Could not load weather data. Please check your connection.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWeatherData();
-  }, [farmerData.location, cachedWeatherAnalysis]);
+  }, [cachedWeatherAnalysis]);
 
   const getWeatherIcon = (condition: string) => {
     const c = condition.toLowerCase();

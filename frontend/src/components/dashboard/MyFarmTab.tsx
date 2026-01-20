@@ -26,22 +26,17 @@ const cropGrowthData = [
 ];
 
 const MyFarmTab = ({ farmerData, cachedWeather }: MyFarmTabProps) => {
-  // Local state for internal fetching (fallback)
-  const [internalLoading, setInternalLoading] = useState(true);
-  const [internalStats, setInternalStats] = useState({
+  // Derived state: prefer cached data if available, otherwise just wait
+  const stats = cachedWeather?.stats || {
     temperature: 0,
     soilMoisture: 0,
     windSpeed: 0,
     humidity: 0,
     uvIndex: 0,
     visibility: 0,
-  });
-  const [internalWeekly, setInternalWeekly] = useState<any[]>([]);
-
-  // Derived state: prefer cached data if available
-  const stats = cachedWeather?.stats || internalStats;
-  const weeklyConditions = cachedWeather?.weekly || internalWeekly;
-  const loading = cachedWeather ? false : internalLoading;
+  };
+  const weeklyConditions = cachedWeather?.weekly || [];
+  const loading = !cachedWeather;
 
   // Function to determine farming season
   const getSeason = () => {
@@ -53,64 +48,7 @@ const MyFarmTab = ({ farmerData, cachedWeather }: MyFarmTabProps) => {
 
   const currentSeason = getSeason();
 
-  useEffect(() => {
-    // If we have cached data, no need to fetch
-    if (cachedWeather) {
-      return;
-    }
-
-    const fetchFarmData = async () => {
-      setInternalLoading(true);
-      try {
-        // Parse location to get just the city/district name for better geocoding results
-        const rawLocation = farmerData.location || "New Delhi";
-        const locationQuery = rawLocation.split(',')[0].trim(); // "Bhopal, MP" -> "Bhopal"
-
-        // 1. Fetch Geocoding for accurate lat/long
-        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${locationQuery}&count=1&language=en&format=json`);
-        const geoData = await geoRes.json();
-
-        if (!geoData.results) throw new Error("Location not found");
-
-        const { latitude, longitude } = geoData.results[0];
-
-        // 2. Fetch Current Weather & Daily History for Charts
-        const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,visibility,uv_index&daily=temperature_2m_max,precipitation_sum,uv_index_max&past_days=7&forecast_days=1`
-        );
-        const weatherData = await weatherRes.json();
-
-        // Update Stats
-        setInternalStats({
-          temperature: weatherData.current.temperature_2m,
-          humidity: weatherData.current.relative_humidity_2m,
-          windSpeed: weatherData.current.wind_speed_10m,
-          // Estimate soil moisture from humidity for now (as API needs specific sensors)
-          soilMoisture: Math.round(weatherData.current.relative_humidity_2m * 0.9 + (Math.random() * 5)),
-          visibility: Math.round(weatherData.current.visibility / 1000), // Convert m to km
-          uvIndex: weatherData.current.uv_index
-        });
-
-        // Process Weekly Data (Last 7 days)
-        const daily = weatherData.daily;
-        const historyData = daily.time.slice(0, 7).map((date: string, i: number) => ({
-          day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-          moisture: 60 + Math.random() * 20, // Simulated variable moisture
-          temp: daily.temperature_2m_max[i],
-          rainfall: daily.precipitation_sum[i]
-        }));
-
-        setInternalWeekly(historyData);
-
-      } catch (error) {
-        console.error("Error fetching farm data:", error);
-      } finally {
-        setInternalLoading(false);
-      }
-    };
-
-    fetchFarmData();
-  }, [farmerData.location, cachedWeather]);
+  // No internal useEffect for fetching. Dashboard handles it.
 
   return (
     <motion.div

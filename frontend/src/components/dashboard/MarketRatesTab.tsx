@@ -205,12 +205,24 @@ const MarketRatesTab = ({ farmerData, cachedMarketData }: MarketRatesTabProps) =
 
   useEffect(() => {
     if (cachedMarketData) {
-      processData(cachedMarketData, false);
+      if (cachedMarketData.length === 0) {
+        console.warn("Cached market data is empty, using fallback.");
+        const fallbackData = [
+          { commodity: "Wheat", market: "Local Mandi", modal_price: "2100", arrival_date: new Date().toISOString() },
+          { commodity: "Rice", market: "District Center", modal_price: "3200", arrival_date: new Date().toISOString() },
+          { commodity: "Maize", market: "City Market", modal_price: "1850", arrival_date: new Date().toISOString() },
+          { commodity: "Potato", market: "Sabzi Mandi", modal_price: "1200", arrival_date: new Date().toISOString() },
+          { commodity: "Onion", market: "Sabzi Mandi", modal_price: "2500", arrival_date: new Date().toISOString() },
+          { commodity: "Tomato", market: "Sabzi Mandi", modal_price: "1500", arrival_date: new Date().toISOString() },
+        ];
+        processData(fallbackData, true);
+      } else {
+        processData(cachedMarketData, false);
+      }
       setLoading(false);
-      return;
     }
-    fetchMarketRates();
-  }, [farmerData.location, cachedMarketData]);
+    // Do nothing if no data, wait for Dashboard to provide it
+  }, [cachedMarketData]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);

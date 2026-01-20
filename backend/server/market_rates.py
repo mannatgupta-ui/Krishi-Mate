@@ -57,10 +57,21 @@ def fetch_market_rates(commodity: Optional[str] = None, state: Optional[str] = N
         response.raise_for_status()
         data = response.json()
         
-        # Structure of data.gov.in response usually has a 'records' field
         records = data.get("records", [])
         print(f"✅ Records Found: {len(records)}")
         
+        # FALLBACK 1: If searching by District returned nothing, try searching by State only
+        if len(records) == 0 and district and state:
+            print(f"⚠️ No records found for District '{district}'. Retrying with State '{state}' only...")
+            # Remove district from filters and retry
+            del params["filters[district]"]
+            
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            records = data.get("records", [])
+            print(f"✅ Fallback (State-level) Records Found: {len(records)}")
+
         if len(records) == 0:
              print(f"⚠️ Raw Response Content: {data}")
 

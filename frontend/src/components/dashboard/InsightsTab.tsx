@@ -78,10 +78,8 @@ const InsightsTab = ({ farmerData, cachedInsights }: InsightsTabProps) => {
       setInsights(cachedInsights.insights);
       setActiveAlerts(cachedInsights.stats.activeAlerts);
       setLoading(false);
-      return;
     }
-    fetchInsights();
-  }, [farmerData.location, cachedInsights]);
+  }, [cachedInsights]);
 
   if (loading) {
     return (
